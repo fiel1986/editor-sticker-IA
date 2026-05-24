@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sticker Studio IA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.0/dist/body-pix.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{font-family:'Outfit',system-ui,-apple-system,sans-serif}
+  .checker{background-image:linear-gradient(45deg,#1a1f2b 25%,transparent 25%),linear-gradient(-45deg,#1a1f2b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a1f2b 75%),linear-gradient(-45deg,transparent 75%,#1a1f2b 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;background-color:#0e1320}
+  input[type=range]{-webkit-appearance:none;height:6px;background:#272e3f;border-radius:999px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:white;border:3px solid #7c3aed;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,.4);margin-top:-7px}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:white;border:3px solid #7c3aed;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,.4)}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;background:#272e3f;border-radius:999px}
+  .btn-active{background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%)!important;border-color:transparent!important;color:white!important;box-shadow:0 4px 16px rgba(124,58,237,.3)}
+  @keyframes load{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+</style>
+</head>
+<body class="bg-[#06080e] text-zinc-100 antialiased selection:bg-violet-500/30 selection:text-white">
+<!-- Loader Modelo -->
+<div id="loader" class="fixed inset-0 z-[100] grid place-items-center bg-[#06080e]/95 backdrop-blur-2xl">
+  <div class="text-center px-6">
+    <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-2xl shadow-violet-900/40 mb-6 animate-[float_3s_ease-in-out_infinite]">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2a10 10 0 0 0-9.95 9h11.64L9.74 7.05a1 1 0 0 1 1.41-1.41l5.66 5.66a1 1 0 0 1 0 1.41l-5.66 5.66a1 1 0 0 1-1.41 0 1 1 0 0 1 0-1.41L13.69 13H2.05A10 10 0 1 0 12 2z"/></svg>
+    </div>
+    <h2 class="text-2xl font-semibold tracking-tight">Cargando IA de recorte</h2>
+    <p class="text-zinc-400 mt-2 text-[15px]">Modelo BodyPix • Todo ocurre en tu navegador</p>
+    <div class="mt-8 w-64 h-1.5 bg-zinc-800 rounded-full overflow-hidden mx-auto relative">
+      <div class="absolute inset-0 w-1/2 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-violet-500 animate-[load_1.6s_linear_infinite]"></div>
+    </div>
+    <p class="text-xs text-zinc-500 mt-4">Primera carga: ~8MB • Luego es instantáneo</p>
+  </div>
+</div>
+
+<div class="max-w-[1280px] mx-auto px-4 py-6 md:py-10">
+  <!-- Header -->
+  <header class="flex items-center justify-between">
+    <div class="flex items-center gap-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-500 grid place-items-center shadow-lg shadow-violet-900/30 ring-1 ring-white/10">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/></svg>
+      </div>
+      <div>
+        <h1 class="text-[22px] md:text-[26px] font-semibold tracking-tight leading-none">Sticker Studio</h1>
+        <p class="text-[13px] text-zinc-400 mt-0.5">Crea stickers perfectos con IA</p>
+      </div>
+    <div class="hidden sm:flex items-center gap-2 text-[12px] text-zinc-400 bg-zinc-900/70 border border-zinc-800 px-3 py-1.5 rounded-full">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>100% privado
+    </div>
+  </header>
+
+  <main class="grid lg:grid-cols-12 gap-6 mt-8 lg:mt-10">
+    <!-- Panel izquierdo -->
+    <section class="lg:col-span-5 xl:col-span-4 space-y-5">
+      <!-- Upload -->
+      <div class="bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/80 to-zinc-900/40 border border-zinc-800 rounded-[24px] p-5 md:p-6 shadow-xl shadow-black/20">
+        <div class="flex items-start justify-between">
+          <div>
+            <h2 class="font-medium text-[17px] flex items-center gap-2"><span class="w-6 h-6 grid place-items-center rounded-lg bg-violet-500/15 text-violet-300 text-xs font-semibold ring-1 ring-violet-500/20">1</span> Sube tu foto</h2>
+            <p class="text-[13.5px] text-zinc-400 mt-2.5 leading-snug">Arrastra o selecciona. Mejor con personas y fondo contrastado.</p>
+          </div>
+        </div>
+        
+        <div id="drop" class="group relative mt-4 border-2 border-dashed border-zinc-700/80 hover:border-violet-500/60 rounded-2xl p-7 text-center transition-all duration-300 cursor-pointer bg-zinc-950/60 hover:bg-zinc-950/80">
+          <input id="file" type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+          <div class="pointer-events-none">
+            <div class="mx-auto w-12 h-12 rounded-xl bg-gradient-to-b from-zinc-800 to-zinc-800/60 grid place-items-center mb3 group-hover:scale-105 transition border border-zinc-700/50">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <p class="font-medium text-[15px]">Arrastra tu imagen aquí</p>
+            <p class="text-[12px] text-zinc-500 mt-1">PNG, JPG, WEBP hasta 10MB</p>
+            <span class="inline-block mt-4 px-4 py-2 rounded-xl bg-white text-black text-[13px] font-medium group-hover:translate-y-[-1px] transition">Seleccionar archivo</span>
+          </div>
+        </div>
+        <div id="processing" class="hidden mt3.5 items-center gap-2.5 text-[13px] text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-xl px-3.5 py-2.5">
+          <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.2" stroke-width="4" fill="none"/><path d="M12 2 a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+          Eliminando fondo con IA...
+        </div>
+      </div>
+
+      <!-- Controles -->
+      <div class="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-[24px] p-5 md:p-6 shadow-xl shadow-black/20">
+        <h2 class="font-medium text-[17px] flex items-center gap-2 mb-5"><span class="w-6 h-6 grid place-items-center rounded-lg bg-fuchsia-500/15 text-fuchsia-300 text-xs font-semibold ring-1 ring-fuchsia-500/20">2</span> Personaliza</h2>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="text-[13px] text-zinc-300 mb-2.5 block font-medium">Forma del sticker</label>
+            <div class="grid grid-cols-3 gap-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800" id="shapeGroup">
+              <button data-shape="free" class="shape-btn btn-active px-3 py-2.5 rounded-lg text-[13px] font-medium border border-transparent transition">Libre</button>
+              <button data-shape="circle" class="shape-btn px-3 py-2.5 rounded-lg text-[13px] font-medium border border-transparent hover:bg-zinc-800 transition text-zinc-300">Círculo</button>
+              <button data-shape="rounded" class="shape-btn px-3 py-2.5 rounded-lg text-[13px] font-medium border border-transparent hover:bg-zinc-800 transition text-zinc-300">Cuadrado</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-5 gap-4 items-end">
+            <div class="col-span-3">
+              <div class="flex justify-between mb-2"><label class="text-[13px] text-zinc-300 font-medium">Grosor borde</label><span id="borderVal" class="text-[12px] text-zinc-400 tabular-nums">8 px</span></div>
+              <input id="borderWidth" type="range" min="0" max="30" value="8" class="w-full">
+            </div>
+            <div class="col-span-2">
+              <label class="text-[13px] text-zinc-300 font-medium mb-2 block">Color</label>
+              <input id="borderColor" type="color" value="#ffffff" class="w-full h-[36px] rounded-xl bg-zinc-950 border border-zinc-700 cursor-pointer p-1">
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-2"><label class="text-[13px] text-zinc-300 font-medium">Tamaño</label><span id="scaleVal" class="text-[12px] text-zinc-400 tabular-nums">100%</span></div>
+            <input id="scale" type="range" min="70" max="130" value="100" class="w-full">
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <div>
+              <label class="text-[13px] text-zinc-300 font-medium">Sombra suave</label>
+              <p class="text-[11.5px] text-zinc-500 -mt-0.5">Profundidad profesional</p>
+            </div>
+            <button id="shadowToggle" aria-pressed="true" class="relative w-12 h-[28px] bg-violet-600 rounded-full transition-all duration-300 shadow-inner shadow-black/20">
+              <span class="absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full transition-all duration-300 translate-x-[18px] shadow-md"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-zinc-500 text-center px-4 leading-relaxed">Consejo: para stickers de WhatsApp/Telegram usa forma Libre con borde blanco de 10-14px.</p>
+    </section>
+
+    <!-- Preview -->
+    <section class="lg:col-span-7 xl:col-span-8">
+      <div class="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-[24px] p-5 md:p-6 shadow-xl shadow-black/20 h-full flex flex-col min-h-[600px]">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-medium text-[17px] flex items-center gap-2"><span class="w-6 h-6 grid place-items-center rounded-lg bg-emerald-500/15 text-emerald-300 text-xs font-semibold ring-1 ring-emerald-500/20">3</span> Vista previa</h2>
+          <div class="flex gap-2">
+            <button id="resetBtn" class="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-[13px] font-medium border border-zinc-700 transition">Reiniciar</button>
+            <button id="downloadBtn" disabled class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 font-medium text-[13px] shadow-lg shadow-violet-900/25 disabled:opacity-40 disabled:cursor-not-allowed hover:translate-y-[-1px] transition">Descargar PNG</button>
+          </div>
+        </div>
+        
+        <div class="flex-1 grid place-items-center checker rounded-2xl border border-zinc-800/80 relative overflow-hidden min-h-[440px]">
+          <canvas id="preview" width="1200" height="1200" class="max-w-full max-h-[62vh] w-auto h-auto object-contain"></canvas>
+          <div id="emptyState" class="absolute inset-0 grid place-items-center text-center p-8 pointer-events-none">
+            <div>
+              <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-b from-zinc-800 to-zinc-900 grid place-items-center mb-4 border border-zinc-700/50 shadow-xl">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </div>
+              <p class="text-zinc-200 font-medium">Sube una foto para empezar</p>
+              <p class="text-[13px] text-zinc-500 mt-1 max-w-[260px] mx-auto">La IA recortará automáticamente el fondo y dejará solo la persona</p>
+            </div>
+          </div>
+        <div class="flex items-center justify-center gap-4 mt-4 text-[11px] text-zinc-500">
+          <span class="flex items-center gap1.5"><span class="w-1 h-1 rounded-full bg-emerald-500"></span>Procesamiento local</span>
+          <span>•</span>
+          <span>PNG transparente 1200×1200</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fileInput = $('#file'), drop = $('#drop'), preview = $('#preview'), pctx = preview.getContext('2d');
+const emptyState = $('#emptyState'), processing = $('#processing'), loader = $('#loader');
+const downloadBtn = $('#downloadBtn'), resetBtn = $('#resetBtn');
+const borderWidth = $('#borderWidth'), borderVal = $('#borderVal'), borderColor = $('#borderColor');
+const scale = $('#scale'), scaleVal = $('#scaleVal'), shadowToggle = $('#shadowToggle');
+const shapeBtns = document.querySelectorAll('.shape-btn');
+
+let net = null, cutout = null, currentShape = 'free', shadowOn = true;
+
+function roundRect(ctx,x,y,w,h,r){const rr=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath()}
+
+async function init(){
+  try{
+    net = await bodyPix.load({architecture:'MobileNetV1', outputStride:16, multiplier:0.75, quantBytes:2});
+  }catch(e){console.error(e); alert('Error al cargar el modelo. Recarga la página.') }
+  loader.style.opacity='0'; loader.style.pointerEvents='none'; setTimeout(()=>loader.remove(),300);
+}
+init();
+
+async function handleFile(f){
+  if(!f || !f.type.startsWith('image/')) return;
+  emptyState.classList.add('hidden'); processing.classList.remove('hidden'); processing.classList.add('flex'); downloadBtn.disabled=true;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = async ()=>{
+    URL.revokeObjectURL(url);
+    if(!net){ await new Promise(r=>setTimeout(r,500)); }
+    await removeBackground(img);
+    processing.classList.add('hidden'); processing.classList.remove('flex');
+    downloadBtn.disabled = false;
+    render();
+  };
+  img.src = url;
+}
+
+async function removeBackground(img){
+  const MAX = 880;
+  let w = img.naturalWidth, h = img.naturalHeight;
+  const s = Math.min(1, MAX/Math.max(w,h));
+  w = Math.round(w*s); h = Math.round(h*s);
+  const tmp = document.createElement('canvas'); tmp.width=w; tmp.height=h;
+  const tctx = tmp.getContext('2d'); tctx.drawImage(img,0,0,w,h);
+  
+  const seg = await net.segmentPerson(tmp, {internalResolution:'medium', segmentationThreshold:0.7});
+  const personPixels = seg.data.reduce((a,v)=>a+v,0);
+  
+  if(personPixels < w*h*0.02){
+    cutout = tmp; return;
+  }
+  
+  const fg={r:0,g:0,b:0,a:255}, bg={r:0,g:0,b:0,a:0};
+  const mask = bodyPix.toMask(seg, fg, bg);
+  const mCanvas = document.createElement('canvas'); mCanvas.width=w; mCanvas.height=h;
+  const mctx = mCanvas.getContext('2d'); mctx.putImageData(mask,0,0);
+  mctx.filter='blur(5px)'; mctx.drawImage(mCanvas,0,0);
+  
+  cutout = document.createElement('canvas'); cutout.width=w; cutout.height=h;
+  const cctx = cutout.getContext('2d');
+  cctx.drawImage(tmp,0,0);
+  cctx.globalCompositeOperation='destination-in';
+  cctx.drawImage(mCanvas,0,0);
+}
+
+function render(){
+  if(!cutout){ pctx.clearRect(0,0,preview.width,preview.height); return }
+  const size=1200;
+  preview.width=size; preview.height=size;
+  const sCanvas=document.createElement('canvas'); sCanvas.width=size; sCanvas.height=size; const sctx=sCanvas.getContext('2d');
+  const bw=parseInt(borderWidth.value), bColor=borderColor.value, userScale=parseInt(scale.value)/100;
+  const iw=cutout.width, ih=cutout.height;
+  const fit = 0.72 * size / Math.max(iw,ih);
+  const finalScale = fit * userScale;
+  const dw=iw*finalScale, dh=ih*finalScale;
+  const x=size/2-dw/2, y=size/2-dh/2;
+  sctx.clearRect(0,0,size,size);
+
+  if(currentShape==='free'){
+    if(bw>0){
+      sctx.save();
+      const steps=28;
+      for(let i=0;i<steps;i++){
+        const a=i/steps*Math.PI*2;
+        sctx.drawImage(cutout, x+Math.cos(a)*bw*1.25, y+Math.sin(a)*bw*1.25, dw, dh);
+      }
+      sctx.globalCompositeOperation='source-in';
+      sctx.fillStyle=bColor;
+      sctx.fillRect(0,0,size,size);
+      sctx.restore();
+    }
+    sctx.drawImage(cutout, x,y,dw,dh);
+  }else if(currentShape==='circle'){
+    const cx=size/2, cy=size/2, r=Math.min(dw,dh)/2;
+    if(bw>0){ sctx.beginPath(); sctx.arc(cx,cy,r+bw,0,Math.PI*2); sctx.fillStyle=bColor; sctx.fill(); }
+    sctx.save(); sctx.beginPath(); sctx.arc(cx,cy,r,0,Math.PI*2); sctx.clip(); sctx.drawImage(cutout, x,y,dw,dh); sctx.restore();
+  }else{
+    const rad=48;
+    if(bw>0){ sctx.fillStyle=bColor; roundRect(sctx, x-bw, y-bw, dw+bw*2, dh+bw*2, rad+bw); sctx.fill(); }
+    sctx.save(); roundRect(sctx,x,y,dw,dh,rad); sctx.clip(); sctx.drawImage(cutout,x,y,dw,dh); sctx.restore();
+  }
+
+  pctx.clearRect(0,0,size,size);
+  if(shadowOn){ pctx.shadowColor='rgba(0,0,0,0.45)'; pctx.shadowBlur=60; pctx.shadowOffsetY=30; }
+  else { pctx.shadowColor='transparent' }
+  pctx.drawImage(sCanvas,0,0);
+}
+
+// Events
+drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('border-violet-500/80','scale-[1.01]')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('border-violet-500/80','scale-[1.01]'));
+drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('border-violet-500/80','scale-[1.01]'); handleFile(e.dataTransfer.files[0])});
+fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+
+borderWidth.addEventListener('input',()=>{borderVal.textContent=borderWidth.value+' px'; render()});
+scale.addEventListener('input',()=>{scaleVal.textContent=scale.value+'%'; render()});
+borderColor.addEventListener('input',render);
+shadowToggle.addEventListener('click',()=>{shadowOn=!shadowOn; shadowToggle.classList.toggle('bg-violet-600',shadowOn); shadowToggle.classList.toggle('bg-zinc-700',!shadowOn); shadowToggle.querySelector('span').classList.toggle('translate-x-[18px]',shadowOn); render()});
+shapeBtns.forEach(b=>b.addEventListener('click',()=>{shapeBtns.forEach(x=>x.classList.remove('btn-active')); b.classList.add('btn-active'); currentShape=b.dataset.shape; render()}));
+
+downloadBtn.addEventListener('click',()=>{
+  preview.toBlob(blob=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='sticker-ia.png'; a.click(); URL.revokeObjectURL(url); },'image/png');
+});
+
+resetBtn.addEventListener('click',()=>{
+  cutout=null; fileInput.value=''; emptyState.classList.remove('hidden'); downloadBtn.disabled=true; pctx.clearRect(0,0,preview.width,preview.height);
+});
+</script>
+</body>
+</html>
