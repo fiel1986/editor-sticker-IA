@@ -25,6 +25,8 @@ Todo ocurre **100% en tu navegador**. Tus fotos nunca salen de tu dispositivo. S
 - 📂 **Drag & drop** — Arrastra la imagen o selecciónala (PNG, JPG, WEBP hasta 10 MB)
 - ⚡ **Sin instalación** — Un solo archivo HTML, funciona abriéndolo directamente
 
+hecho con IA (meta IA) 
+
 ---
 
 ## 🚀 Cómo usarlo
@@ -79,3 +81,5 @@ Made with 💜 and processed entirely in your browser.
 
 🤝 Contributing
 Contributions are welcome!
+
+
